@@ -1,12 +1,18 @@
 import boto3
 import click
 
+##below line creates asession with your user under profile 'shotty'
 session = boto3.Session(profile_name='shotty')
 ec2 = session.resource('ec2')
+
+##purpose of function filter_instnaces is to get the list of all instances under a project (tag)
+##if not passed list of instances
 def filter_instances(project):
+    ##intitialize variable list instances with zero items
     instances = []
 
     if project:
+    ## filter is a list having dictionary of name key and value the value of proejct tag name as passed
        filters = [{'Name':'tag:Project','Values':[project]}]
        instances = ec2.instances.filter(Filters=filters)
     else:
@@ -14,10 +20,77 @@ def filter_instances(project):
 
     return instances
 
-
 @click.group()
+def cli():
+    """Shotty manages snapshots"""
+
+@cli.group('snapshots')
+def snapshots():
+    """Commands for Snapshots"""
+
+@snapshots.command('list')
+@click.option('--project', default=None, help="Only Snapshots for project (tag Project:<name>)")
+def list_snapshots(project):
+    "List EC2 Snashots my buddy"
+
+    instances = filter_instances(project)
+
+    for i in instances:
+        for v in i.volumes.all():
+            for s in v.snapshots.all():
+                print(",".join((
+                    s.id,
+                    v.id,
+                    i.id,
+                    s.state,
+                    s.progress,
+                    s.start_time.strftime("%c")
+                )))
+
+    return
+
+
+@cli.group('volumes')
+def volumes():
+    """Commands for Volumes"""
+
+@volumes.command('list')
+@click.option('--project', default=None, help="Only Volumes for project (tag Project:<name>)")
+def list_volumes(project):
+    "List EC2 Volumes my buddy"
+
+    instances = filter_instances(project)
+
+    for i in instances:
+        for v in i.volumes.all():
+            print(",".join((
+                v.id,
+                i.id,
+                v.state,
+                str(v.size) + "GiB",
+                v.encrypted and "Encrypted" or 'NOT Encrypted'
+            )))
+    return
+
+@cli.group('instances')
 def instances():
     """Commands for instances"""
+
+@instances.command("createsnapshot")
+@click.option('--project', default=None, help="Only instances for project (tag Project:<name>)")
+
+def create_snapshots(project):
+    "Create snapshots for EC2 instances"
+
+    instances = filter_instances(project)
+
+    for i in instances:
+        for v in i.volumes.all():
+            print("creating snapshot of {0}".format(v.id))
+            v.create_snapshot(Description="CReated by snapshotalyzer 30000")
+
+    return
+
 
 @instances.command('list')
 @click.option('--project', default=None, help="Only instances for project (tag Project:<name>)")
@@ -46,7 +119,7 @@ def stop_instances(project):
     instances = filter_instances(project)
 
     for i in instances:
-        print("Stopping {0}...", format(i.id))
+        print("Stopping...",format(i.id))
         i.stop()
 
     return
@@ -59,11 +132,11 @@ def start_instances(project):
     instances = filter_instances(project)
 
     for i in instances:
-        print("Starting {0}...", format(i.id))
+        print("Starting...",format(i.id))
         i.start()
 
     return
 
 
 if __name__ == '__main__':
-    instances()
+    cli()
