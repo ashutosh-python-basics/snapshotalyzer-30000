@@ -85,10 +85,22 @@ def create_snapshots(project):
     instances = filter_instances(project)
 
     for i in instances:
+
+        print("Stopping..{0}".format(i.id))
+
         i.stop()
+        i.wait_until_stopped()
+
         for v in i.volumes.all():
             print("creating snapshot of {0}".format(v.id))
             v.create_snapshot(Description="CReated by snapshotalyzer 30000")
+
+        print("Starting..{0}".format(i.id))
+
+        i.start()
+        i.wait_until_running()
+
+    print("JOB's DONE!")
 
     return
 
