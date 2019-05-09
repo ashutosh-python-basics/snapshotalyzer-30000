@@ -87,6 +87,8 @@ def instances():
 
 @instances.command("createsnapshot")
 @click.option('--project', default=None, help="Only instances for project (tag Project:<name>)")
+##for force sub
+##@click.option('--project', default=None, help="Only instances for project (tag Project:<name>)")
 
 def create_snapshots(project):
     "Create snapshots for EC2 instances"
@@ -104,7 +106,7 @@ def create_snapshots(project):
             if has_pending_snapshot(v):
                 print("Skipping {0}, snapshot already in progress",format(v.id))
                 continue
-                
+
             print("creating snapshot of {0}".format(v.id))
             v.create_snapshot(Description="CReated by snapshotalyzer 30000")
 
@@ -150,6 +152,23 @@ def stop_instances(project):
             i.stop()
         except botocore.exceptions.ClientError as e:
             print("Could not stop {0}. ".format(i.id) + str(e))
+            continue
+
+    return
+
+@instances.command('reboot')
+@click.option('--project', default=None, help='Only instances for project')
+def reboot_instances(project):
+    "Reboot EC2 instances"
+
+    instances = filter_instances(project)
+
+    for i in instances:
+        print("Rebooting...",format(i.id))
+        try:
+            i.reboot()
+        except botocore.exceptions.ClientError as e:
+            print("Could not reboot {0}. ".format(i.id) + str(e))
             continue
 
     return
