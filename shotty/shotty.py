@@ -8,7 +8,24 @@ ec2 = session.resource('ec2')
 
 ##purpose of function filter_instnaces is to get the list of all instances under a project (tag)
 ##if not passed list of instances
-def filter_instances(project):
+def filter_instances(project,force):
+    ##intitialize variable list instances with zero items
+    instances = []
+
+    if project is None and force==False:
+        print("ATTENTION!! You have neither provided a project nor using Force parameter. The script WILL BE NOT executed and this will be reported to your manager")
+        exit()
+
+    if project:
+    ## filter is a list having dictionary of name key and value the value of proejct tag name as passed
+       filters = [{'Name':'tag:Project','Values':[project]}]
+       instances = ec2.instances.filter(Filters=filters)
+    else:
+       instances = ec2.instances.all()
+
+    return instances
+
+def filter_instances_vol(project):
     ##intitialize variable list instances with zero items
     instances = []
 
@@ -39,7 +56,7 @@ def snapshots():
 def list_snapshots(project, list_all):
     "List EC2 Snashots my buddy"
 
-    instances = filter_instances(project)
+    instances = filter_instances_vol(project)
 
     for i in instances:
         for v in i.volumes.all():
@@ -68,7 +85,7 @@ def volumes():
 def list_volumes(project):
     "List EC2 Volumes my buddy"
 
-    instances = filter_instances(project)
+    instances = filter_instances_vol(project)
 
     for i in instances:
         for v in i.volumes.all():
@@ -87,13 +104,13 @@ def instances():
 
 @instances.command("createsnapshot")
 @click.option('--project', default=None, help="Only instances for project (tag Project:<name>)")
-##for force sub
-##@click.option('--project', default=None, help="Only instances for project (tag Project:<name>)")
+##for force subcommand
+@click.option('--force', default=False,type=bool, help="This will FORCE take provided command")
 
-def create_snapshots(project):
+def create_snapshots(project,force):
     "Create snapshots for EC2 instances"
 
-    instances = filter_instances(project)
+    instances = filter_instances(project,force)
 
     for i in instances:
 
@@ -125,7 +142,7 @@ def create_snapshots(project):
 def list_instances(project):
     "List EC2 Instances my friend"
 
-    instances = filter_instances(project)
+    instances = filter_instances_vol(project)
 
     for i in instances:
         tags = { t['Key']: t['Value'] for t in i.tags or [] }
@@ -141,10 +158,18 @@ def list_instances(project):
 
 @instances.command('stop')
 @click.option('--project', default=None, help='Only instnaces for project')
-def stop_instances(project):
+##for force subcommand
+@click.option('--force', default=False,type=bool, help="This will FORCE take provided command")
+
+
+def stop_instances(project,force):
     "Stop EC2 instances"
 
-    instances = filter_instances(project)
+    if project is None and force==False:
+        print("ATTENTION!! You have neither provided a project nor using Force parameter. The script WILL NOT executed and this will be reported")
+        exit()
+    ##elif project is not None and force==False:
+    instances = filter_instances(project,force)
 
     for i in instances:
         print("Stopping...",format(i.id))
@@ -158,10 +183,12 @@ def stop_instances(project):
 
 @instances.command('reboot')
 @click.option('--project', default=None, help='Only instances for project')
-def reboot_instances(project):
+##for force subcommand
+@click.option('--force', default=False,type=bool, help="This will FORCE take provided command")
+def reboot_instances(project,force):
     "Reboot EC2 instances"
 
-    instances = filter_instances(project)
+    instances = filter_instances(project,force)
 
     for i in instances:
         print("Rebooting...",format(i.id))
@@ -175,10 +202,13 @@ def reboot_instances(project):
 
 @instances.command('start')
 @click.option('--project', default=None, help='Only instnaces for project')
-def start_instances(project):
+##for force subcommand
+@click.option('--force', default=False,type=bool, help="This will FORCE take provided command")
+
+def start_instances(project, force):
     "Start EC2 instances"
 
-    instances = filter_instances(project)
+    instances = filter_instances(project,force)
 
     for i in instances:
         print("Starting...",format(i.id))
